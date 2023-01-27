@@ -1,8 +1,8 @@
-import express from "express";
-import dotenv from "dotenv";
-import lodash from "lodash";
-import axios from "axios";
-import cors from "cors";
+const express = require("express");
+const dotenv = require("dotenv");
+const lodash = require("lodash");
+const axios = require("axios");
+const cors = require("cors");
 
 const server = express();
 dotenv.config();
