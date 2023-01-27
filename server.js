@@ -10,31 +10,35 @@ cors();
 
 // fetch all auctions
 server.get("/", async (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET, POST, OPTIONS, PUT, PATCH, DELETE"
-  );
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "X-Requested-With,content-type"
-  );
-  const auctions = await axios
-    .get(process.env.HYPIXEL_AUCTION_API)
-    .then((response) => {
-      return response.data.auctions;
-    })
-    .catch((err) => {
-      res.status(500).json({ message: err });
+  try {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader(
+      "Access-Control-Allow-Methods",
+      "GET, POST, OPTIONS, PUT, PATCH, DELETE"
+    );
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "X-Requested-With,content-type"
+    );
+    const auctions = await axios
+      .get(process.env.HYPIXEL_AUCTION_API)
+      .then((response) => {
+        return response.data.auctions;
+      })
+      .catch((err) => {
+        res.status(500).json({ message: err });
+      });
+    const bin = filterAuctions(auctions, { bin: true });
+    bin.forEach((item) => {
+      removeHigherPricedItems(bin, item);
     });
-  const bin = filterAuctions(auctions, { bin: true });
-  bin.forEach((item) => {
-    removeHigherPricedItems(bin, item);
-  });
 
-  const uniqueBin = lodash.uniqBy(bin, "item_name");
+    const uniqueBin = lodash.uniqBy(bin, "item_name");
 
-  res.status(200).json(uniqueBin);
+    res.status(200).json(uniqueBin);
+  } catch (err) {
+    res.status(500).json({ message: err });
+  }
 });
 
 function removeHigherPricedItems(auctions, itemInAuction) {
@@ -67,5 +71,3 @@ function filterAuctions(auctions, filter) {
 server.listen(process.env.PORT, () => {
   console.log(`Server is running on port ${process.env.PORT}`);
 });
-
-module.exports = server;
