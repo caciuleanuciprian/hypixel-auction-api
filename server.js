@@ -3,41 +3,84 @@ const dotenv = require("dotenv");
 const lodash = require("lodash");
 const axios = require("axios");
 const cors = require("cors");
-
+const { Worker } = require("worker_threads");
 const server = express();
 dotenv.config();
 cors();
+const THREAD_COUNT = 4;
 
-// fetch all auctions
+function createWorker() {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker("./worker.js", {
+      workerData: { thread_count: THREAD_COUNT },
+    });
+    worker.on("message", (data) => {
+      resolve(data);
+    });
+    worker.on("error", (err) => {
+      reject(`An error occured ${err}`);
+    });
+  });
+}
+
+async function getBinAuctions() {
+  let auctions = getAllAuctions();
+  const bin = filterAuctions(auctions, { bin: true });
+  console.log(bin, "getBinAuctions");
+  return bin;
+}
+
+function filterAuctions(auctions, filter) {
+  return lodash.filter(auctions, filter);
+}
+
 server.get("/", async (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, OPTIONS, PUT, PATCH, DELETE"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "X-Requested-With,content-type"
+  );
   try {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader(
-      "Access-Control-Allow-Methods",
-      "GET, POST, OPTIONS, PUT, PATCH, DELETE"
+    const workerPromises = [];
+    for (let i = 0; i < THREAD_COUNT; i++) {
+      workerPromises.push(createWorker());
+    }
+
+    const thread_results = await Promise.all(workerPromises);
+    const total = lodash.union(
+      thread_results[0],
+      thread_results[1],
+      thread_results[2],
+      thread_results[3]
     );
-    res.setHeader(
-      "Access-Control-Allow-Headers",
-      "X-Requested-With,content-type"
-    );
-    const auctions = await axios
-      .get(process.env.HYPIXEL_AUCTION_API)
-      .then((response) => {
-        return response.data.auctions;
+
+    const asd = total.map((item) =>
+      item.map((item) => {
+        return {
+          item_name: item.item_name,
+          starting_bid: item.starting_bid,
+          tier: item.tier,
+        };
       })
-      .catch((err) => {
-        res.status(500).json({ message: err });
-      });
-    const bin = filterAuctions(auctions, { bin: true });
-    bin.forEach((item) => {
-      removeHigherPricedItems(bin, item);
+    );
+
+    // res.status(200).json(asd);
+
+    asd[0].forEach((item) => {
+      removeHigherPricedItems(asd[0], item);
     });
 
-    const uniqueBin = lodash.uniqBy(bin, "item_name");
+    const uniqueBin = lodash.uniqBy(asd[0], "item_name");
 
+    // TO-DO: Add filter for reforges, stars and pets
     res.status(200).json(uniqueBin);
   } catch (err) {
-    res.status(500).json({ message: err });
+    res.status(500).json(err.message);
+    throw new Error(err);
   }
 });
 
@@ -62,10 +105,6 @@ function removeHigherPricedItems(auctions, itemInAuction) {
       }
     }
   }
-}
-
-function filterAuctions(auctions, filter) {
-  return lodash.filter(auctions, filter);
 }
 
 server.listen(process.env.PORT, () => {
