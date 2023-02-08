@@ -58,7 +58,7 @@ server.get("/", async (req, res) => {
       thread_results[3]
     );
 
-    const asd = total.map((item) =>
+    const filteredArray = total.map((item) =>
       item.map((item) => {
         return {
           item_name: item.item_name,
@@ -68,15 +68,11 @@ server.get("/", async (req, res) => {
       })
     );
 
-    // res.status(200).json(asd);
-
-    asd[0].forEach((item) => {
-      removeHigherPricedItems(asd[0], item);
-    });
-
-    const uniqueBin = lodash.uniqBy(asd[0], "item_name");
-
     // TO-DO: Add filter for reforges, stars and pets
+    filteredArray[0].forEach((item) => {
+      removeHigherPricedItems(filteredArray[0], item);
+    });
+    const uniqueBin = lodash.uniqBy(filteredArray[0], "item_name");
     res.status(200).json(uniqueBin);
   } catch (err) {
     res.status(500).json(err.message);
