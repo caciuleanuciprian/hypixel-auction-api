@@ -7,13 +7,11 @@ const server = express();
 dotenv.config();
 cors();
 const THREAD_COUNT = 4;
-const { dirname } = require("path");
-const appDir = dirname(require.main.filename);
 
 function createWorker() {
   return new Promise((resolve, reject) => {
-    console.log(appDir + `\\worker.js`);
-    const worker = new Worker(appDir + `\\worker.js`, {
+    console.log(__dirname + `\\worker.js`);
+    const worker = new Worker(__dirname + `\\worker.js`, {
       workerData: { thread_count: THREAD_COUNT },
     });
     worker.on("message", (data) => {
