@@ -7,10 +7,13 @@ const server = express();
 dotenv.config();
 cors();
 const THREAD_COUNT = 4;
+const { dirname } = require("path");
+const appDir = dirname(require.main.filename);
 
 function createWorker() {
   return new Promise((resolve, reject) => {
-    const worker = new Worker("./worker.js", {
+    console.log(appDir + `\\worker.js`);
+    const worker = new Worker(appDir + `\\worker.js`, {
       workerData: { thread_count: THREAD_COUNT },
     });
     worker.on("message", (data) => {
@@ -23,6 +26,14 @@ function createWorker() {
 }
 
 server.get("/", async (req, res) => {
+  try {
+    res.status(200).send("alive");
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+
+server.get("/bin", async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader(
     "Access-Control-Allow-Methods",
