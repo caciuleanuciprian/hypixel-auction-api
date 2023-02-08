@@ -3,15 +3,17 @@ const dotenv = require("dotenv");
 const lodash = require("lodash");
 const axios = require("axios");
 const cors = require("cors");
+var path = require("path");
 const { Worker } = require("worker_threads");
 const server = express();
 dotenv.config();
 cors();
+global.appRoot = path.resolve(__dirname);
 const THREAD_COUNT = 4;
 
 function createWorker() {
   return new Promise((resolve, reject) => {
-    const worker = new Worker("./worker.js", {
+    const worker = new Worker(appRoot + "/worker.js", {
       workerData: { thread_count: THREAD_COUNT },
     });
     worker.on("message", (data) => {
@@ -21,17 +23,6 @@ function createWorker() {
       reject(`An error occured ${err}`);
     });
   });
-}
-
-async function getBinAuctions() {
-  let auctions = getAllAuctions();
-  const bin = filterAuctions(auctions, { bin: true });
-  console.log(bin, "getBinAuctions");
-  return bin;
-}
-
-function filterAuctions(auctions, filter) {
-  return lodash.filter(auctions, filter);
 }
 
 server.get("/", async (req, res) => {
