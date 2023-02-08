@@ -18,7 +18,6 @@ function createWorker() {
     });
     worker.on("error", (err) => {
       reject(`An error occured ${err}`);
-      throw new Error(err);
     });
   });
 }
