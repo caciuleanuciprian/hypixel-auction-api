@@ -10,8 +10,8 @@ const THREAD_COUNT = 4;
 
 function createWorker() {
   return new Promise((resolve, reject) => {
-    console.log(__dirname + `\\worker.js`);
-    const worker = new Worker(__dirname + `\\worker.js`, {
+    console.log(__dirname + `/worker.js`);
+    const worker = new Worker(__dirname + `/worker.js`, {
       workerData: { thread_count: THREAD_COUNT },
     });
     worker.on("message", (data) => {
