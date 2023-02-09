@@ -10,7 +10,6 @@ const THREAD_COUNT = 4;
 
 function createWorker() {
   return new Promise((resolve, reject) => {
-    console.log(__dirname + `/worker.js`);
     const worker = new Worker(__dirname + `/worker.js`, {
       workerData: { thread_count: THREAD_COUNT },
     });
@@ -24,6 +23,15 @@ function createWorker() {
 }
 
 server.get("/", async (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, OPTIONS, PUT, PATCH, DELETE"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "X-Requested-With,content-type"
+  );
   try {
     res.status(200).send("alive");
   } catch (err) {
@@ -58,6 +66,9 @@ server.get("/bin", async (req, res) => {
     const filteredArray = total.map((item) =>
       item.map((item) => {
         return {
+          uuid: item.uuid,
+          auctioneer: item.auctioneer,
+          profile_id: item.profile_id,
           item_name: item.item_name,
           starting_bid: item.starting_bid,
           tier: item.tier,
