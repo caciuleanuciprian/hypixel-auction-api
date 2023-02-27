@@ -8,10 +8,10 @@ dotenv.config();
 cors();
 const THREAD_COUNT = 4;
 
-function createWorker() {
+function createWorker(i) {
   return new Promise((resolve, reject) => {
     const worker = new Worker(__dirname + `/worker.js`, {
-      workerData: { thread_count: THREAD_COUNT },
+      workerData: { thread_count: THREAD_COUNT, id: i + 1 },
     });
     worker.on("message", (data) => {
       resolve(data);
@@ -52,64 +52,42 @@ server.get("/bin", async (req, res) => {
   try {
     const workerPromises = [];
     for (let i = 0; i < THREAD_COUNT; i++) {
-      workerPromises.push(createWorker());
+      workerPromises.push(createWorker(i));
     }
 
     const thread_results = await Promise.all(workerPromises);
-    const total = lodash.union(
-      thread_results[0],
-      thread_results[1],
-      thread_results[2],
-      thread_results[3]
-    );
+    const total = [];
+    total.push(...thread_results[0]);
+    total.push(...thread_results[1]);
+    total.push(...thread_results[2]);
+    total.push(...thread_results[3]);
 
-    const filteredArray = total.map((item) =>
-      item.map((item) => {
-        return {
-          uuid: item.uuid,
-          auctioneer: item.auctioneer,
-          profile_id: item.profile_id,
-          item_name: item.item_name,
-          starting_bid: item.starting_bid,
-          tier: item.tier,
-        };
+    const filteredArray = total.map((array) =>
+      array.map((item) => {
+        if (item === null) {
+          lodash.remove(array, (item) => item === null || item === undefined);
+        } else
+          return {
+            item_name: item.item_name,
+            starting_bid: item.starting_bid,
+            tier: item.tier,
+          };
       })
     );
 
-    // TO-DO: Add filter for reforges, stars and pets
-    filteredArray[0].forEach((item) => {
-      removeHigherPricedItems(filteredArray[0], item);
-    });
-    const uniqueBin = lodash.uniqBy(filteredArray[0], "item_name");
-    res.status(200).json(uniqueBin);
+    const finalArray = lodash.flattenDeep(filteredArray);
+    const sortedPriceAndArray = lodash
+      .chain(finalArray)
+      .sortBy("starting_bid")
+      .uniqBy("item_name")
+      .value();
+
+    res.status(200).json(sortedPriceAndArray);
   } catch (err) {
     res.status(500).json(err.message);
     throw new Error(err);
   }
 });
-
-function removeHigherPricedItems(auctions, itemInAuction) {
-  const currentItems = [];
-  for (let i = 0; i < auctions.length; i++) {
-    if (auctions[i].item_name === itemInAuction.item_name) {
-      currentItems.push({
-        item_name: auctions[i].item_name,
-        starting_bid: auctions[i].starting_bid,
-      });
-    }
-  }
-  if (currentItems.length > 0) {
-    let min = Math.min(...currentItems.map((item) => item.starting_bid));
-    for (let i = 0; i < auctions.length; i++) {
-      if (
-        auctions[i].starting_bid > min &&
-        auctions[i].item_name === itemInAuction.item_name
-      ) {
-        auctions.splice(i, 1);
-      }
-    }
-  }
-}
 
 server.listen(process.env.PORT, () => {
   console.log(`Server is running on port ${process.env.PORT}`);
